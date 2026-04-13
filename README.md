@@ -4,7 +4,7 @@
 
 Steam Account Manager is a local Windows desktop tool for managing multiple Steam account records and starting a Steam login attempt for the selected account.
 
-The current UI is built with PySide6. The older Tkinter implementation is still kept in `app.py` as a fallback/reference, but `main.py` starts the PySide6 UI by default.
+The current UI is built with PySide6. The older Tkinter implementation is archived under `legacy/` for reference only; `main.py` starts only the PySide6 UI.
 
 ![UI](imgs/main_page.png)
 
@@ -12,6 +12,10 @@ The current UI is built with PySide6. The older Tkinter implementation is still 
 
 - Local account management with JSON persistence.
 - Search and status filtering.
+- Account sorting by recent use or banned/frozen state.
+- Per-account 5E rank selection and 5E rank sorting.
+- 5E season reset button: set every account to unranked and archive previous ranks in notes.
+- Manual frozen-until time with approximate remaining-time display.
 - Create, edit, delete, and batch-delete accounts.
 - Batch status updates for selected accounts.
 - Quick import for one-line or multi-line account text.
@@ -19,6 +23,7 @@ The current UI is built with PySide6. The older Tkinter implementation is still 
 - Duplicate import handling by `login_name`.
 - Safer import overwrite behavior: empty imported fields do not wipe existing `last_login` or notes.
 - Steam path auto-detection before manual selection.
+- Last login time updates after a Steam login attempt starts successfully.
 - Steam login panel with configurable shutdown behavior:
   - graceful shutdown first, ask before force close
   - force close directly
@@ -49,14 +54,9 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-`main.py` starts `qt_app.py` by default.
+`main.py` starts `qt_app.py`.
 
-If PySide6 is not installed, the program will fail with an install hint. The Tkinter fallback can be enabled explicitly:
-
-```powershell
-$env:SAM_ALLOW_TKINTER_FALLBACK="1"
-python main.py
-```
+If PySide6 is not installed, the program will fail with an install hint. The archived Tkinter UI is not used by the entry point or release builds.
 
 ## Data Files
 
@@ -101,34 +101,39 @@ If you need stronger security, add encrypted storage before using this with impo
 
 For a Windows executable, PyInstaller is the most practical option.
 
-Recommended first build:
+Recommended single-file build:
 
 ```powershell
 pip install pyinstaller
-pyinstaller --noconsole --onedir --name SteamAccountManager main.py
+python -m PyInstaller --noconfirm --clean --onefile --noconsole --name SteamAccountManager --icon imgs\gnuhl-7oo8y-001.ico --add-data "imgs\gnuhl-7oo8y-001.ico;imgs" --exclude-module tkinter --exclude-module legacy main.py
 ```
 
-Recommended layout:
+Build output:
 
 ```text
-SteamAccountManager/
-├─ SteamAccountManager.exe
-├─ _internal/
-└─ data/
-   ├─ accounts.json
-   └─ settings.json
+dist/
+└─ SteamAccountManager.exe
 ```
 
-Keep real account data outside Git and avoid bundling real `accounts.json` into distributable archives.
+Users can run `SteamAccountManager.exe` directly. On first launch, the app creates runtime data beside the executable:
+
+```text
+data/
+├─ accounts.json
+└─ settings.json
+```
+
+Keep real account data outside Git and avoid bundling real `accounts.json` or `settings.json` into distributable archives.
 
 ## Project Structure
 
 ```text
 main.py              Entry point; starts the PySide6 UI
 qt_app.py            Current PySide6 desktop UI
-app.py               Older Tkinter UI fallback/reference
+legacy/tk_app.py     Archived Tkinter UI reference; not used by main.py
 models.py            SteamAccount data model
 repositories.py      JSON load/save with validation and atomic writes
+freeze_utils.py      Frozen-until time parsing and remaining-time formatting
 text_importer.py     Account text parsing logic
 system_utils.py      Windows/Steam helper functions
 config.py            Paths, status definitions, translations, theme constants

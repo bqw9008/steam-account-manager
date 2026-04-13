@@ -21,7 +21,11 @@ env/
 
 build/
 dist/
+release/
 *.spec
+*.exe
+*.msi
+*.zip
 pip-wheel-metadata/
 
 data/accounts.json

@@ -5,7 +5,6 @@ import locale
 import os
 import subprocess
 import time
-import tkinter as tk
 import winreg
 from ctypes import wintypes
 from pathlib import Path

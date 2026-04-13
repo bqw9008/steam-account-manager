@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
@@ -17,18 +18,105 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+APP_ICON_FILE = BASE_DIR / "imgs" / "gnuhl-7oo8y-001.ico"
+
 try:
-    from .config import DATA_FILE, SETTINGS_FILE, get_status_label, get_status_options, get_translations, normalize_language, normalize_status_value
+    from .config import FIVE_E_RANK_OPTIONS, FIVE_E_UNRANKED, DATA_FILE, SETTINGS_FILE, get_status_label, get_status_options, get_translations, normalize_five_e_rank, normalize_language, normalize_status_value
+    from .freeze_utils import format_frozen_remaining, parse_frozen_until
     from .models import SteamAccount
     from .repositories import AccountRepository, SettingsRepository
     from .system_utils import detect_steam_executable, detect_system_language, get_windows_theme_mode, is_process_running, request_steam_shutdown, terminate_steam_processes, wait_for_steam_processes_exit
     from .text_importer import parse_account_block, split_import_blocks
 except ImportError:
-    from config import DATA_FILE, SETTINGS_FILE, get_status_label, get_status_options, get_translations, normalize_language, normalize_status_value
+    from config import FIVE_E_RANK_OPTIONS, FIVE_E_UNRANKED, DATA_FILE, SETTINGS_FILE, get_status_label, get_status_options, get_translations, normalize_five_e_rank, normalize_language, normalize_status_value
+    from freeze_utils import format_frozen_remaining, parse_frozen_until
     from models import SteamAccount
     from repositories import AccountRepository, SettingsRepository
     from system_utils import detect_steam_executable, detect_system_language, get_windows_theme_mode, is_process_running, request_steam_shutdown, terminate_steam_processes, wait_for_steam_processes_exit
     from text_importer import parse_account_block, split_import_blocks
+
+
+def compact_import_accounts(parsed_accounts):
+    latest_by_login = {}
+    duplicate_keys = set()
+    duplicate_login_names = []
+    for account_data in parsed_accounts:
+        login_name = account_data["login_name"].strip()
+        normalized_login_name = login_name.lower()
+        if not normalized_login_name:
+            continue
+        if normalized_login_name in latest_by_login and normalized_login_name not in duplicate_keys:
+            duplicate_keys.add(normalized_login_name)
+            duplicate_login_names.append(login_name)
+        latest_by_login[normalized_login_name] = account_data
+    return list(latest_by_login.values()), duplicate_login_names
+
+
+def parse_account_datetime(value):
+    return parse_frozen_until(value)
+
+
+def account_last_used_at(account):
+    return parse_account_datetime(account.last_login) or parse_account_datetime(account.updated_at) or datetime.min
+
+
+def account_sort_timestamp(account):
+    last_used = account_last_used_at(account)
+    return (
+        last_used.toordinal() * 24 * 60 * 60
+        + last_used.hour * 60 * 60
+        + last_used.minute * 60
+        + last_used.second
+    )
+
+
+def is_account_banned_or_frozen(account, now=None):
+    if account.status in {"frozen", "disabled"}:
+        return True
+    frozen_until = parse_frozen_until(account.frozen_until)
+    return bool(frozen_until and frozen_until > (now or datetime.now()))
+
+
+def five_e_rank_sort_value(rank):
+    normalized = normalize_five_e_rank(rank)
+    if normalized == FIVE_E_UNRANKED:
+        return len(FIVE_E_RANK_OPTIONS)
+    return FIVE_E_RANK_OPTIONS.index(normalized)
+
+
+def format_five_e_rank(rank, messages):
+    normalized = normalize_five_e_rank(rank)
+    return messages["five_e_rank_unranked"] if normalized == FIVE_E_UNRANKED else normalized
+
+
+def append_note_line(note, line):
+    existing_note = note.strip()
+    return f"{existing_note}\n{line}" if existing_note else line
+
+
+def upsert_previous_five_e_rank_note(note, line):
+    lines = note.strip().splitlines() if note.strip() else []
+    for index, existing_line in enumerate(lines):
+        if (
+            existing_line.startswith("上赛季5E分段：")
+            or existing_line.startswith("Previous season 5E rank:")
+        ):
+            lines[index] = line
+            return "\n".join(lines)
+    return append_note_line(note, line)
+
+
+def reset_account_five_e_rank_to_unranked(account, messages, recorded_at):
+    current_rank = normalize_five_e_rank(account.five_e_rank)
+    archived = current_rank != FIVE_E_UNRANKED
+    if archived:
+        account.note = upsert_previous_five_e_rank_note(
+            account.note,
+            messages["previous_five_e_rank_note"].format(rank=current_rank, date=recorded_at),
+        )
+    account.five_e_rank = FIVE_E_UNRANKED
+    return archived
 
 
 class LoginSignals(QObject):
@@ -51,9 +139,22 @@ class AccountDialog(QDialog):
         self.password.setEchoMode(QLineEdit.Password)
         self.email = QLineEdit(account.email if account else "")
         self.phone = QLineEdit(account.phone if account else "")
+        self.five_e_rank = QComboBox()
+        self.five_e_rank.addItem(messages["five_e_rank_unranked"], FIVE_E_UNRANKED)
+        for rank in FIVE_E_RANK_OPTIONS:
+            self.five_e_rank.addItem(rank, rank)
+        current_rank = normalize_five_e_rank(account.five_e_rank if account else FIVE_E_UNRANKED)
+        self.five_e_rank.setCurrentIndex(max(0, self.five_e_rank.findData(current_rank)))
         self.status = QComboBox(); self.status.addItems(get_status_options(language))
         self.status.setCurrentText(get_status_label(account.status, language) if account else get_status_options(language)[0])
         self.last_login = QLineEdit(account.last_login if account else "")
+        self.frozen_until = QLineEdit(account.frozen_until if account else "")
+        self.frozen_until.setPlaceholderText(messages["frozen_until_placeholder"])
+        self.frozen_remaining = QLabel(format_frozen_remaining(self.frozen_until.text(), messages))
+        self.frozen_remaining.setWordWrap(True)
+        self.frozen_until.textChanged.connect(
+            lambda value: self.frozen_remaining.setText(format_frozen_remaining(value, messages))
+        )
         self.note = QTextEdit(account.note if account else "")
         show_password = QCheckBox(messages["show_password"])
         show_password.toggled.connect(lambda checked: self.password.setEchoMode(QLineEdit.Normal if checked else QLineEdit.Password))
@@ -61,7 +162,9 @@ class AccountDialog(QDialog):
         for label, widget in [
             ("field_profile_name", self.profile_name), ("field_login_name", self.login_name),
             ("field_password", self.password), ("", show_password), ("field_email", self.email),
-            ("field_phone", self.phone), ("field_status", self.status), ("field_last_login", self.last_login),
+            ("field_phone", self.phone), ("field_five_e_rank", self.five_e_rank),
+            ("field_status", self.status), ("field_last_login", self.last_login),
+            ("field_frozen_until", self.frozen_until), ("column_frozen_remaining", self.frozen_remaining),
             ("field_note", self.note),
         ]:
             form.addRow(messages[label] if label else "", widget)
@@ -77,8 +180,10 @@ class AccountDialog(QDialog):
             "password": self.password.text(),
             "email": self.email.text().strip(),
             "phone": self.phone.text().strip(),
+            "five_e_rank": self.five_e_rank.currentData() or "",
             "status": normalize_status_value(self.status.currentText()),
             "last_login": self.last_login.text().strip(),
+            "frozen_until": self.frozen_until.text().strip(),
             "note": self.note.toPlainText().strip(),
         }
 
@@ -132,11 +237,17 @@ class SteamAccountManagerQt(QMainWindow):
         self.messages = get_translations(self.language); self.status_options = get_status_options(self.language)
         self.repo = AccountRepository(DATA_FILE); self.accounts = self.repo.load_accounts()
         self.current_account_id = None; self.login_in_progress = False; self.login_status_text = self.messages["login_status_idle"]
+        self.login_account_id = None
         self.signals = LoginSignals(); self.signals.status.connect(self.set_login_status); self.signals.finished.connect(self.finish_login); self.signals.force_close_requested.connect(self.answer_force_close)
         self.setWindowTitle(self.messages["app_title"]); self.resize(1240, 760)
+        self.apply_window_icon()
         self.build_ui(); self.apply_style(); self.refresh_table(); self.report_load_issues()
 
     def t(self, key, **kwargs): return self.messages[key].format(**kwargs)
+
+    def apply_window_icon(self):
+        if APP_ICON_FILE.exists():
+            self.setWindowIcon(QIcon(str(APP_ICON_FILE)))
 
     def build_ui(self):
         root = QWidget(); layout = QVBoxLayout(root)
@@ -145,7 +256,8 @@ class SteamAccountManagerQt(QMainWindow):
         layout.addWidget(title); layout.addWidget(subtitle)
         bar = QToolBar(); self.search = QLineEdit(); self.search.setPlaceholderText(self.messages["search_label"]); self.search.textChanged.connect(self.refresh_table)
         self.status_filter = QComboBox(); self.status_filter.addItems([self.messages["status_all"], *self.status_options]); self.status_filter.currentTextChanged.connect(self.refresh_table)
-        bar.addWidget(QLabel(self.messages["search_label"])); bar.addWidget(self.search); bar.addWidget(QLabel(self.messages["status_filter_label"])); bar.addWidget(self.status_filter); bar.addSeparator()
+        self.sort_order = QComboBox(); self.sort_order.addItems([label for _, label in self.sort_options()]); self.sort_order.currentTextChanged.connect(self.refresh_table)
+        bar.addWidget(QLabel(self.messages["search_label"])); bar.addWidget(self.search); bar.addWidget(QLabel(self.messages["status_filter_label"])); bar.addWidget(self.status_filter); bar.addWidget(QLabel(self.messages["sort_label"])); bar.addWidget(self.sort_order); bar.addSeparator()
         for text, fn in [
             ("button_new", self.new_account), ("detail_title", self.edit_account), ("button_login", self.open_steam_dialog),
             ("button_quick_line_import", lambda: self.open_text_import("quick_line_dialog_title")),
@@ -155,8 +267,9 @@ class SteamAccountManagerQt(QMainWindow):
         layout.addWidget(bar)
         batch = QHBoxLayout(); self.batch_status = QComboBox(); self.batch_status.addItems(self.status_options)
         apply_status = QPushButton(self.messages["button_apply_batch_status"]); apply_status.clicked.connect(self.apply_batch_status)
-        batch.addWidget(QLabel(self.messages["batch_status_label"])); batch.addWidget(self.batch_status); batch.addWidget(apply_status); batch.addStretch(); layout.addLayout(batch)
-        self.table = QTableWidget(0, 7); self.table.setHorizontalHeaderLabels([self.messages["column_profile_name"], self.messages["column_login_name"], self.messages["field_email"], self.messages["field_phone"], self.messages["column_status"], self.messages["column_last_login"], "Updated"])
+        reset_rank = QPushButton(self.messages["button_reset_all_five_e_unranked"]); reset_rank.clicked.connect(self.reset_all_five_e_ranks_to_unranked)
+        batch.addWidget(QLabel(self.messages["batch_status_label"])); batch.addWidget(self.batch_status); batch.addWidget(apply_status); batch.addWidget(reset_rank); batch.addStretch(); layout.addLayout(batch)
+        self.table = QTableWidget(0, 10); self.table.setHorizontalHeaderLabels([self.messages["column_profile_name"], self.messages["column_login_name"], self.messages["field_email"], self.messages["field_phone"], self.messages["column_five_e_rank"], self.messages["column_status"], self.messages["column_frozen_until"], self.messages["column_frozen_remaining"], self.messages["column_last_login"], "Updated"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows); self.table.setSelectionMode(QTableWidget.ExtendedSelection); self.table.setEditTriggers(QTableWidget.NoEditTriggers); self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.itemSelectionChanged.connect(self.selection_changed); self.table.doubleClicked.connect(self.edit_account)
         layout.addWidget(self.table, 1); self.summary = QLabel(); layout.addWidget(self.summary); self.setCentralWidget(root)
@@ -236,20 +349,42 @@ class SteamAccountManagerQt(QMainWindow):
                 backup = issue.backup_path or self.messages["backup_not_created"]
                 QMessageBox.warning(self, self.messages["data_load_issue_title"], self.t(key, path=issue.file_path, backup_path=backup, error=issue.error))
 
+    def sort_options(self):
+        return [
+            ("recent_use", self.messages["sort_recent_use"]),
+            ("five_e_rank", self.messages["sort_five_e_rank"]),
+            ("frozen_first", self.messages["sort_frozen_first"]),
+            ("unfrozen_first", self.messages["sort_unfrozen_first"]),
+        ]
+
+    def current_sort_key(self):
+        current_label = self.sort_order.currentText()
+        return next((key for key, label in self.sort_options() if label == current_label), "recent_use")
+
+    def sort_accounts(self, accounts):
+        sort_key = self.current_sort_key()
+        if sort_key == "five_e_rank":
+            return sorted(accounts, key=lambda a: (five_e_rank_sort_value(a.five_e_rank), -account_sort_timestamp(a)))
+        if sort_key == "frozen_first":
+            return sorted(accounts, key=lambda a: (0 if is_account_banned_or_frozen(a) else 1, -account_sort_timestamp(a)))
+        if sort_key == "unfrozen_first":
+            return sorted(accounts, key=lambda a: (0 if not is_account_banned_or_frozen(a) else 1, -account_sort_timestamp(a)))
+        return sorted(accounts, key=account_last_used_at, reverse=True)
+
     def filtered_accounts(self):
         keyword = self.search.text().strip().lower(); status = self.status_filter.currentText().strip(); result = []
         for account in self.accounts:
             if status != self.messages["status_all"] and account.status != normalize_status_value(status): continue
-            haystack = " ".join([account.profile_name, account.login_name, account.email, account.phone, account.note]).lower()
+            haystack = " ".join([account.profile_name, account.login_name, account.email, account.phone, account.five_e_rank, account.frozen_until, account.note]).lower()
             if keyword and keyword not in haystack: continue
             result.append(account)
-        return sorted(result, key=lambda a: a.updated_at, reverse=True)
+        return self.sort_accounts(result)
 
     def refresh_table(self):
         selected = self.selected_ids(); rows = self.filtered_accounts(); self.table.setRowCount(0)
         for account in rows:
             row = self.table.rowCount(); self.table.insertRow(row)
-            values = [account.profile_name, account.login_name, account.email, account.phone, get_status_label(account.status, self.language), account.last_login or "-", account.updated_at]
+            values = [account.profile_name, account.login_name, account.email, account.phone, format_five_e_rank(account.five_e_rank, self.messages), get_status_label(account.status, self.language), account.frozen_until or "-", format_frozen_remaining(account.frozen_until, self.messages), account.last_login or "-", account.updated_at]
             for col, value in enumerate(values):
                 item = QTableWidgetItem(value); item.setData(Qt.UserRole, account.account_id); self.table.setItem(row, col, item)
             if account.account_id in selected: self.table.selectRow(row)
@@ -293,6 +428,7 @@ class SteamAccountManagerQt(QMainWindow):
         data = dialog.data()
         if not data["profile_name"]: QMessageBox.warning(self, self.messages["prompt_title"], self.messages["account_name_required"]); return
         if not data["login_name"]: QMessageBox.warning(self, self.messages["prompt_title"], self.messages["login_name_required"]); return
+        if data["frozen_until"] and not parse_frozen_until(data["frozen_until"]): QMessageBox.warning(self, self.messages["prompt_title"], self.messages["invalid_frozen_until_warning"]); return
         duplicate = self.find_by_login(data["login_name"])
         if duplicate and (not account or duplicate.account_id != account.account_id): QMessageBox.warning(self, self.messages["prompt_title"], self.t("login_name_duplicate", login_name=data["login_name"])); return
         old = copy.deepcopy(self.accounts)
@@ -319,10 +455,18 @@ class SteamAccountManagerQt(QMainWindow):
         if not raw: QMessageBox.warning(self, self.messages["prompt_title"], self.messages["import_empty_warning"]); return
         parsed, skipped = self.parse_import(raw)
         if not parsed: QMessageBox.warning(self, self.messages["prompt_title"], self.messages["import_no_match_warning"]); return
-        created = sum(1 for d in parsed if not self.find_by_login(d["login_name"])); updated = len(parsed) - created
-        if QMessageBox.question(self, self.messages["import_preview_title"], self.t("import_preview_summary", created=created, updated=updated, skipped=skipped) + "\n\n" + self.messages["import_confirm_question"]) != QMessageBox.Yes: return
-        old = copy.deepcopy(self.accounts); latest = {d["login_name"].strip().lower(): d for d in parsed}; created = updated = 0
-        for data in latest.values():
+        import_accounts, duplicate_login_names = compact_import_accounts(parsed)
+        created = sum(1 for d in import_accounts if not self.find_by_login(d["login_name"])); updated = len(import_accounts) - created
+        preview_parts = [
+            self.t("import_preview_summary", created=created, updated=updated, skipped=skipped),
+            self.messages["import_preview_update_hint"],
+        ]
+        if duplicate_login_names:
+            preview_parts.append(self.t("import_preview_duplicate_hint", login_names=", ".join(duplicate_login_names)))
+        preview_parts.append(self.messages["import_confirm_question"])
+        if QMessageBox.question(self, self.messages["import_preview_title"], "\n\n".join(preview_parts)) != QMessageBox.Yes: return
+        old = copy.deepcopy(self.accounts); created = updated = 0
+        for data in import_accounts:
             account = self.find_by_login(data["login_name"])
             if account:
                 for key in ("profile_name", "login_name", "password", "email", "phone", "status", "last_login", "note"):
@@ -342,6 +486,24 @@ class SteamAccountManagerQt(QMainWindow):
         for account in selected: account.status = status_key; account.updated_at = now
         if not self.save_accounts(): self.accounts = old; return
         self.refresh_table(); QMessageBox.information(self, self.messages["success_title"], self.t("batch_status_success", count=len(selected), status=status_label))
+
+    def reset_all_five_e_ranks_to_unranked(self):
+        if not self.accounts:
+            QMessageBox.warning(self, self.messages["prompt_title"], self.messages["no_accounts_warning"]); return
+        if QMessageBox.question(self, self.messages["reset_all_five_e_unranked_confirm_title"], self.t("reset_all_five_e_unranked_confirm_message", count=len(self.accounts))) != QMessageBox.Yes: return
+        old = copy.deepcopy(self.accounts)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        note_date = datetime.now().strftime("%Y-%m-%d")
+        archived = 0
+        for account in self.accounts:
+            if reset_account_five_e_rank_to_unranked(account, self.messages, note_date):
+                archived += 1
+                account.updated_at = now
+            elif account.five_e_rank != FIVE_E_UNRANKED:
+                account.five_e_rank = FIVE_E_UNRANKED
+                account.updated_at = now
+        if not self.save_accounts(): self.accounts = old; return
+        self.refresh_table(); QMessageBox.information(self, self.messages["success_title"], self.t("reset_all_five_e_unranked_success", archived=archived))
 
     def delete_selected(self):
         selected = self.selected_accounts()
@@ -398,6 +560,7 @@ class SteamAccountManagerQt(QMainWindow):
         if not account.password: QMessageBox.warning(self, self.messages["prompt_title"], self.messages["missing_password_warning"]); return
         steam_path = self.resolve_steam()
         if not steam_path: self.set_login_status(self.messages["steam_path_missing_status"]); return
+        self.login_account_id = account.account_id
         self.login_in_progress = True; self.set_login_status(self.t("launching_login_status", profile_name=account.profile_name or account.login_name))
         threading.Thread(target=self.perform_login, args=(steam_path, account.login_name, account.password, account.profile_name or account.login_name), daemon=True).start()
 
@@ -422,9 +585,28 @@ class SteamAccountManagerQt(QMainWindow):
 
     def answer_force_close(self, q): q.put(QMessageBox.question(self, self.messages["steam_force_close_confirm_title"], self.messages["steam_force_close_confirm_message"]) == QMessageBox.Yes)
 
+    def update_last_login_for_current_attempt(self):
+        if not self.login_account_id:
+            return
+        account = next((candidate for candidate in self.accounts if candidate.account_id == self.login_account_id), None)
+        if not account:
+            return
+        old = copy.deepcopy(self.accounts)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        account.last_login = now
+        account.updated_at = now
+        if not self.save_accounts():
+            self.accounts = old
+            return
+        self.refresh_table()
+
     def finish_login(self, success, message):
         self.login_in_progress = False; self.set_login_status(message)
-        if not success: QMessageBox.critical(self, self.messages["steam_login_failed_title"], message); return
+        if not success:
+            self.login_account_id = None
+            QMessageBox.critical(self, self.messages["steam_login_failed_title"], message); return
+        self.update_last_login_for_current_attempt()
+        self.login_account_id = None
         if self.settings.get("hide_login_attempt_notice", False): return
         box = QMessageBox(self); box.setWindowTitle(self.messages["login_attempt_notice_title"]); box.setText(self.messages["login_attempt_notice_message"]); cb = QCheckBox(self.messages["login_attempt_notice_dont_show_again"]); box.setCheckBox(cb); box.exec()
         if cb.isChecked(): updated = dict(self.settings); updated["hide_login_attempt_notice"] = True; self.save_settings(updated)
@@ -432,6 +614,8 @@ class SteamAccountManagerQt(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    if APP_ICON_FILE.exists():
+        app.setWindowIcon(QIcon(str(APP_ICON_FILE)))
     window = SteamAccountManagerQt()
     window.show()
     sys.exit(app.exec())

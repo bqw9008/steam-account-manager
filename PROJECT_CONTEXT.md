@@ -9,22 +9,28 @@
 - 本地运行
 - 数据持久化到 JSON
 - 支持中英文界面，并根据系统语言自动切换
+- 支持账号列表按最近使用、封号/冻结状态排序
+- 支持每个账号记录 5E 分段，并按 S > A++ > A+ > A > B++ > B+ > B > C++ > C+ > C > D 排序
+- 新账号和空分段默认是 `未定级`；赛季重置可一键把所有账号设为未定级，并把已定级账号的上赛季分段追加到备注
+- Steam 登录尝试成功启动后会自动更新 `last_login`，用于最近使用排序
 - 主要面向 Windows 环境
 - 当前登录流程基于 `steam.exe -login <login_name> <password>` 启动 Steam；如果 Steam 已在运行，会先尝试结束相关进程再重新启动
-- 当前默认界面入口是 PySide6；旧的 Tkinter 界面代码仍保留在 `app.py` 作为回退或参考
+- 当前界面入口是 PySide6；旧的 Tkinter 界面代码已归档到 `legacy/`，只作为参考，不再作为回退入口
 
 ## 当前目录说明
 
 - `main.py`
-  程序入口，默认启动 PySide6 界面；如果 PySide6 不可用，会尝试回退到 Tkinter 版本
+  程序入口，只启动 PySide6 界面；如果 PySide6 不可用，会提示安装依赖
 - `qt_app.py`
   PySide6 主界面与主要交互逻辑
-- `app.py`
-  旧 Tkinter 主界面与业务逻辑，当前保留作为回退参考
+- `legacy/tk_app.py`
+  已归档的旧 Tkinter 主界面与业务逻辑，仅作为参考，不参与默认入口和发布打包
 - `models.py`
   账号数据模型 `SteamAccount`
 - `repositories.py`
   账号数据和设置数据的读写
+- `freeze_utils.py`
+  冻结截止时间解析与剩余时间显示
 - `config.py`
   全局配置、主题、双语文案、状态映射
 - `system_utils.py`
@@ -54,6 +60,22 @@ pip install -r requirements.txt
 
 也可以作为包入口运行，但当前主要按脚本方式使用。
 
+## 打包与发布
+
+当前推荐用 PyInstaller 构建单文件 Windows exe：
+
+```powershell
+python -m PyInstaller --noconfirm --clean --onefile --noconsole --name SteamAccountManager --icon imgs\gnuhl-7oo8y-001.ico --add-data "imgs\gnuhl-7oo8y-001.ico;imgs" --exclude-module tkinter --exclude-module legacy main.py
+```
+
+构建产物位于：
+
+```text
+dist/SteamAccountManager.exe
+```
+
+运行时数据路径已按打包场景处理：源码运行时写入项目目录的 `data/`，exe 运行时写入 exe 同目录的 `data/`。首次运行会自动创建 `data/accounts.json` 和 `data/settings.json`。发布时只需要提供 exe，不要把真实 `data/` 一起打包或提交。
+
 ## 当前数据结构
 
 `SteamAccount` 主要字段：
@@ -70,10 +92,14 @@ pip install -r requirements.txt
   邮箱
 - `phone`
   电话或其他辅助字段
+- `five_e_rank`
+  5E 分段；空值会规范为 `未定级`，已定级值按 `S`、`A++`、`A+`、`A`、`B++`、`B+`、`B`、`C++`、`C+`、`C`、`D` 排序
 - `status`
   内部状态 key，目前有 `active`、`pending`、`frozen`、`disabled`
 - `last_login`
   最后登录时间文本
+- `frozen_until`
+  5E 平台冻结/封禁截止时间文本；界面会按本地时间计算大致剩余时间
 - `note`
   备注
 - `created_at`

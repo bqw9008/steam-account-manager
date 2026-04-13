@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent
+SOURCE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else SOURCE_DIR
 DATA_DIR = BASE_DIR / "data"
 DATA_FILE = DATA_DIR / "accounts.json"
 SETTINGS_FILE = DATA_DIR / "settings.json"
@@ -19,6 +21,8 @@ STATUS_DEFINITIONS = (
     ("disabled", {LANGUAGE_ZH: "停用", LANGUAGE_EN: "Disabled"}),
 )
 STATUS_OPTIONS = [status_key for status_key, _ in STATUS_DEFINITIONS]
+FIVE_E_UNRANKED = "未定级"
+FIVE_E_RANK_OPTIONS = ("S", "A++", "A+", "A", "B++", "B+", "B", "C++", "C+", "C", "D")
 
 TRANSLATIONS = {
     LANGUAGE_ZH: {
@@ -26,14 +30,23 @@ TRANSLATIONS = {
         "app_subtitle": "本地管理 Steam 账号信息，支持搜索、筛选、增删改与 JSON 持久化。",
         "status_all": "全部",
         "default_selection": "当前未选择账号",
+        "no_accounts_warning": "当前没有账号可操作。",
         "login_status_idle": "登录状态：待命",
         "list_title": "账号列表",
         "search_label": "搜索",
         "status_filter_label": "状态筛选",
+        "sort_label": "排序",
+        "sort_recent_use": "最近使用优先",
+        "sort_frozen_first": "封号/冻结优先",
+        "sort_unfrozen_first": "未封号优先",
+        "sort_five_e_rank": "5E分段优先",
         "column_profile_name": "账号名称",
         "column_login_name": "登录名",
         "column_status": "状态",
+        "column_five_e_rank": "5E分段",
         "column_last_login": "最后登录",
+        "column_frozen_until": "冻结截止",
+        "column_frozen_remaining": "冻结剩余",
         "button_new": "新建账号",
         "button_delete": "删除选中",
         "button_refresh": "刷新列表",
@@ -41,12 +54,17 @@ TRANSLATIONS = {
         "button_quick_line_import": "快速保存",
         "batch_status_label": "批量状态",
         "button_apply_batch_status": "应用到选中",
+        "button_reset_all_five_e_unranked": "一键设置未定级",
         "detail_title": "账号详情",
         "field_profile_name": "账号名称",
         "field_login_name": "登录名",
         "field_email": "绑定邮箱",
         "field_phone": "手机号",
+        "field_five_e_rank": "5E分段",
+        "five_e_rank_unranked": "未定级",
         "field_last_login": "最后登录",
+        "field_frozen_until": "冻结截止时间",
+        "frozen_until_placeholder": "例如 2026-04-30 23:59",
         "field_note": "备注",
         "field_password": "密码",
         "field_status": "状态",
@@ -95,6 +113,7 @@ TRANSLATIONS = {
         "account_name_required": "请先填写账号名称。",
         "login_name_required": "请先填写登录名。",
         "login_name_duplicate": "登录名“{login_name}”已经存在，请确认后再保存。",
+        "invalid_frozen_until_warning": "冻结截止时间格式不正确。请使用 YYYY-MM-DD 或 YYYY-MM-DD HH:MM。",
         "update_not_found_error": "未找到要更新的账号，请刷新后重试。",
         "account_updated_success": "账号信息已更新。",
         "account_created_success": "新账号已创建。",
@@ -141,18 +160,29 @@ TRANSLATIONS = {
         "batch_status_confirm_title": "确认批量修改状态",
         "batch_status_confirm_message": "确定要把选中的 {count} 个账号状态改为“{status}”吗？",
         "batch_status_success": "已将 {count} 个账号状态改为“{status}”。",
+        "reset_all_five_e_unranked_confirm_title": "确认赛季重置",
+        "reset_all_five_e_unranked_confirm_message": "确定要把全部 {count} 个账号的 5E 分段设置为未定级吗？已定级账号的当前分段会追加到备注作为上赛季记录。",
+        "reset_all_five_e_unranked_success": "已将全部账号设置为未定级，并记录 {archived} 个已定级账号的上赛季分段。",
+        "previous_five_e_rank_note": "上赛季5E分段：{rank}（记录于 {date}）",
         "save_accounts_failed": "保存账号数据失败：{error}\n文件位置：{path}",
         "save_settings_failed": "保存设置失败：{error}\n文件位置：{path}",
         "data_load_issue_title": "数据文件异常",
         "accounts_load_failed": "账号数据文件读取或结构校验失败，程序已按空账号列表继续启动。\n原文件：{path}\n备份副本：{backup_path}\n错误：{error}",
         "settings_load_failed": "设置文件读取或结构校验失败，程序已按默认设置继续启动。\n原文件：{path}\n备份副本：{backup_path}\n错误：{error}",
         "backup_not_created": "未能创建备份",
+        "frozen_remaining_not_set": "未设置",
+        "frozen_remaining_expired": "已结束",
+        "frozen_remaining_days_hours": "约 {days} 天 {hours} 小时",
+        "frozen_remaining_hours_minutes": "约 {hours} 小时 {minutes} 分钟",
+        "frozen_remaining_minutes": "约 {minutes} 分钟",
         "clipboard_alloc_error": "无法申请系统剪贴板内存。",
         "clipboard_write_error": "无法写入系统剪贴板。",
         "clipboard_open_error": "无法打开系统剪贴板。",
         "clipboard_set_error": "无法将文本写入剪贴板。",
+        "note_5e_nickname_label": "5E昵称",
         "note_5e_account_label": "5E账号",
         "note_5e_password_label": "5E密码",
+        "note_email_address_label": "邮箱地址",
         "note_email_password_label": "邮箱密码",
     },
     LANGUAGE_EN: {
@@ -160,14 +190,23 @@ TRANSLATIONS = {
         "app_subtitle": "Manage local Steam accounts with search, filters, editing, and JSON persistence.",
         "status_all": "All",
         "default_selection": "No account selected",
+        "no_accounts_warning": "There are no accounts to update.",
         "login_status_idle": "Login Status: Idle",
         "list_title": "Accounts",
         "search_label": "Search",
         "status_filter_label": "Filter by Status",
+        "sort_label": "Sort",
+        "sort_recent_use": "Recently Used First",
+        "sort_frozen_first": "Banned/Frozen First",
+        "sort_unfrozen_first": "Unbanned First",
+        "sort_five_e_rank": "5E Rank First",
         "column_profile_name": "Profile Name",
         "column_login_name": "Login Name",
         "column_status": "Status",
+        "column_five_e_rank": "5E Rank",
         "column_last_login": "Last Login",
+        "column_frozen_until": "Frozen Until",
+        "column_frozen_remaining": "Frozen Remaining",
         "button_new": "New Account",
         "button_delete": "Delete Selected",
         "button_refresh": "Refresh List",
@@ -175,12 +214,17 @@ TRANSLATIONS = {
         "button_quick_line_import": "Quick Save",
         "batch_status_label": "Batch Status",
         "button_apply_batch_status": "Apply to Selected",
+        "button_reset_all_five_e_unranked": "Set All Unranked",
         "detail_title": "Account Details",
         "field_profile_name": "Profile Name",
         "field_login_name": "Login Name",
         "field_email": "Email",
         "field_phone": "Phone",
+        "field_five_e_rank": "5E Rank",
+        "five_e_rank_unranked": "Unranked",
         "field_last_login": "Last Login",
+        "field_frozen_until": "Frozen Until",
+        "frozen_until_placeholder": "Example: 2026-04-30 23:59",
         "field_note": "Notes",
         "field_password": "Password",
         "field_status": "Status",
@@ -229,6 +273,7 @@ TRANSLATIONS = {
         "account_name_required": "Please fill in the profile name first.",
         "login_name_required": "Please fill in the login name first.",
         "login_name_duplicate": "The login name \"{login_name}\" already exists. Please confirm it before saving.",
+        "invalid_frozen_until_warning": "The frozen-until time format is invalid. Use YYYY-MM-DD or YYYY-MM-DD HH:MM.",
         "update_not_found_error": "The account to update could not be found. Refresh and try again.",
         "account_updated_success": "Account details were updated.",
         "account_created_success": "The new account was created.",
@@ -275,18 +320,29 @@ TRANSLATIONS = {
         "batch_status_confirm_title": "Confirm Batch Status Change",
         "batch_status_confirm_message": "Change the selected {count} accounts to \"{status}\"?",
         "batch_status_success": "Changed {count} accounts to \"{status}\".",
+        "reset_all_five_e_unranked_confirm_title": "Confirm Season Reset",
+        "reset_all_five_e_unranked_confirm_message": "Set all {count} accounts to unranked? Accounts with a current rank will have that rank appended to notes as the previous season record.",
+        "reset_all_five_e_unranked_success": "Set all accounts to unranked and recorded previous-season ranks for {archived} ranked accounts.",
+        "previous_five_e_rank_note": "Previous season 5E rank: {rank} (recorded {date})",
         "save_accounts_failed": "Failed to save account data: {error}\nFile: {path}",
         "save_settings_failed": "Failed to save settings: {error}\nFile: {path}",
         "data_load_issue_title": "Data File Problem",
         "accounts_load_failed": "The account data file could not be read or did not match the expected structure, so the app started with an empty account list.\nOriginal file: {path}\nBackup copy: {backup_path}\nError: {error}",
         "settings_load_failed": "The settings file could not be read or did not match the expected structure, so the app started with default settings.\nOriginal file: {path}\nBackup copy: {backup_path}\nError: {error}",
         "backup_not_created": "No backup was created",
+        "frozen_remaining_not_set": "Not set",
+        "frozen_remaining_expired": "Ended",
+        "frozen_remaining_days_hours": "About {days}d {hours}h",
+        "frozen_remaining_hours_minutes": "About {hours}h {minutes}m",
+        "frozen_remaining_minutes": "About {minutes}m",
         "clipboard_alloc_error": "Unable to allocate clipboard memory.",
         "clipboard_write_error": "Unable to write to the clipboard.",
         "clipboard_open_error": "Unable to open the system clipboard.",
         "clipboard_set_error": "Unable to place text onto the clipboard.",
+        "note_5e_nickname_label": "5E Nickname",
         "note_5e_account_label": "5E Account",
         "note_5e_password_label": "5E Password",
+        "note_email_address_label": "Email Address",
         "note_email_password_label": "Email Password",
     },
 }
@@ -319,6 +375,13 @@ def normalize_status_value(status_value: str | None) -> str:
     if not normalized:
         return STATUS_OPTIONS[0]
     return _STATUS_LABEL_TO_KEY.get(normalized.casefold(), STATUS_OPTIONS[0])
+
+
+def normalize_five_e_rank(rank_value: str | None) -> str:
+    normalized = (rank_value or "").strip().upper()
+    if not normalized or normalized in {FIVE_E_UNRANKED.upper(), "UNRANKED"}:
+        return FIVE_E_UNRANKED
+    return normalized if normalized in FIVE_E_RANK_OPTIONS else FIVE_E_UNRANKED
 
 
 def get_status_label(status_value: str | None, language_code: str | None) -> str:

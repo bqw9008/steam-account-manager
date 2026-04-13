@@ -4,7 +4,7 @@
 
 Steam Account Manager 是一个本地 Windows 桌面工具，用于管理多个 Steam 账号，并可快速对选中的账号发起登录操作。
 
-当前界面基于 PySide6 构建。旧版的 Tkinter 实现仍保留在 `app.py` 中作为备用/参考，但默认由 `main.py` 启动 PySide6 界面。
+当前界面基于 PySide6 构建。旧版 Tkinter 实现已归档到 `legacy/` 中，仅作为参考；`main.py` 只启动 PySide6 界面。
 
 ![界面](imgs/main_page.png)
 
@@ -14,6 +14,10 @@ Steam Account Manager 是一个本地 Windows 桌面工具，用于管理多个 
 
 - 本地账号管理（使用 JSON 持久化存储）
 - 支持搜索与状态筛选
+- 支持按最近使用、封号/冻结状态排序
+- 支持为每个账号选择 5E 分段，并按 5E 分段排序
+- 支持一键赛季重置为未定级，并把上赛季分段追加到备注
+- 支持手动填写冻结截止时间，并显示大致剩余时间
 - 支持账号的创建、编辑、删除及批量删除
 - 支持对选中账号进行批量状态更新
 - 支持单行或多行账号文本的快速导入
@@ -21,6 +25,7 @@ Steam Account Manager 是一个本地 Windows 桌面工具，用于管理多个 
 - 根据 `login_name` 自动处理重复导入
 - 更安全的导入覆盖逻辑：空字段不会覆盖已有的 `last_login` 或备注
 - 自动检测 Steam 路径（也支持手动选择）
+- Steam 登录尝试成功启动后自动更新最后登录时间
 - Steam 登录面板支持可配置的关闭策略：
   - 优雅关闭（先尝试正常关闭，必要时询问是否强制关闭）
   - 直接强制关闭
@@ -55,15 +60,9 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-`main.py` 默认启动 `qt_app.py`（PySide6 界面）。
+`main.py` 启动 `qt_app.py`（PySide6 界面）。
 
-如果未安装 PySide6，程序会报错并提示安装。  
-你也可以手动启用 Tkinter 备用界面：
-
-```powershell
-$env:SAM_ALLOW_TKINTER_FALLBACK="1"
-python main.py
-```
+如果未安装 PySide6，程序会报错并提示安装。已归档的 Tkinter 界面不再由入口加载，也不用于发布打包。
 
 ---
 
@@ -132,26 +131,30 @@ data/settings.json
 
 如果需要打包为 Windows 可执行文件，推荐使用 PyInstaller。
 
-推荐构建方式：
+推荐单文件构建方式：
 
 ```powershell
 pip install pyinstaller
-pyinstaller --noconsole --onedir --name SteamAccountManager main.py
+python -m PyInstaller --noconfirm --clean --onefile --noconsole --name SteamAccountManager --icon imgs\gnuhl-7oo8y-001.ico --add-data "imgs\gnuhl-7oo8y-001.ico;imgs" --exclude-module tkinter --exclude-module legacy main.py
 ```
 
-推荐目录结构：
+构建产物：
 
 ```text
-SteamAccountManager/
-├─ SteamAccountManager.exe
-├─ _internal/
-└─ data/
-   ├─ accounts.json
-   └─ settings.json
+dist/
+└─ SteamAccountManager.exe
+```
+
+用户可直接运行 `SteamAccountManager.exe`。首次启动时，程序会在 exe 同目录自动创建运行时数据：
+
+```text
+data/
+├─ accounts.json
+└─ settings.json
 ```
 
 ⚠️ 注意：
-不要将真实账号数据提交到 Git，也不要将真实的 `accounts.json` 打包进发布文件。
+不要将真实账号数据提交到 Git，也不要将真实的 `accounts.json` 或 `settings.json` 打包进发布文件。
 
 ---
 
@@ -160,9 +163,10 @@ SteamAccountManager/
 ```text
 main.py              程序入口（启动 PySide6 界面）
 qt_app.py            当前 PySide6 桌面界面
-app.py               旧版 Tkinter 界面（备用/参考）
+legacy/tk_app.py     已归档的 Tkinter 界面参考（不由 main.py 使用）
 models.py            SteamAccount 数据模型
 repositories.py      JSON 读写（带校验与原子写入）
+freeze_utils.py      冻结截止时间解析与剩余时间显示
 text_importer.py     账号文本解析逻辑
 system_utils.py      Windows / Steam 工具函数
 config.py            路径、状态定义、翻译、主题配置

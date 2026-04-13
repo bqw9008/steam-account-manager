@@ -5,9 +5,9 @@ from datetime import datetime
 from uuid import uuid4
 
 try:
-    from .config import STATUS_OPTIONS, normalize_status_value
+    from .config import STATUS_OPTIONS, normalize_five_e_rank, normalize_status_value
 except ImportError:
-    from config import STATUS_OPTIONS, normalize_status_value
+    from config import STATUS_OPTIONS, normalize_five_e_rank, normalize_status_value
 
 
 @dataclass
@@ -18,8 +18,10 @@ class SteamAccount:
     password: str
     email: str
     phone: str
+    five_e_rank: str
     status: str
     last_login: str
+    frozen_until: str
     note: str
     created_at: str
     updated_at: str
@@ -35,6 +37,8 @@ class SteamAccount:
         status: str,
         last_login: str,
         note: str,
+        frozen_until: str = "",
+        five_e_rank: str = "",
     ) -> "SteamAccount":
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return cls(
@@ -44,8 +48,10 @@ class SteamAccount:
             password=password,
             email=email.strip(),
             phone=phone.strip(),
+            five_e_rank=normalize_five_e_rank(five_e_rank),
             status=normalize_status_value(status),
             last_login=last_login.strip(),
+            frozen_until=frozen_until.strip(),
             note=note.strip(),
             created_at=now,
             updated_at=now,
@@ -60,8 +66,10 @@ class SteamAccount:
             password=payload.get("password", ""),
             email=payload.get("email", ""),
             phone=payload.get("phone", ""),
+            five_e_rank=normalize_five_e_rank(payload.get("five_e_rank", "")),
             status=normalize_status_value(payload.get("status", STATUS_OPTIONS[0])),
             last_login=payload.get("last_login", ""),
+            frozen_until=payload.get("frozen_until", ""),
             note=payload.get("note", ""),
             created_at=payload.get("created_at", ""),
             updated_at=payload.get("updated_at", ""),
