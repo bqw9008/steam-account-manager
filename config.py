@@ -1,0 +1,407 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATA_FILE = DATA_DIR / "accounts.json"
+SETTINGS_FILE = DATA_DIR / "settings.json"
+
+LANGUAGE_ZH = "zh_CN"
+LANGUAGE_EN = "en_US"
+SUPPORTED_LANGUAGES = (LANGUAGE_ZH, LANGUAGE_EN)
+
+STATUS_DEFINITIONS = (
+    ("active", {LANGUAGE_ZH: "常用", LANGUAGE_EN: "Active"}),
+    ("pending", {LANGUAGE_ZH: "待整理", LANGUAGE_EN: "Needs Review"}),
+    ("frozen", {LANGUAGE_ZH: "已冻结", LANGUAGE_EN: "Frozen"}),
+    ("disabled", {LANGUAGE_ZH: "停用", LANGUAGE_EN: "Disabled"}),
+)
+STATUS_OPTIONS = [status_key for status_key, _ in STATUS_DEFINITIONS]
+
+TRANSLATIONS = {
+    LANGUAGE_ZH: {
+        "app_title": "Steam账号管理系统",
+        "app_subtitle": "本地管理 Steam 账号信息，支持搜索、筛选、增删改与 JSON 持久化。",
+        "status_all": "全部",
+        "default_selection": "当前未选择账号",
+        "login_status_idle": "登录状态：待命",
+        "list_title": "账号列表",
+        "search_label": "搜索",
+        "status_filter_label": "状态筛选",
+        "column_profile_name": "账号名称",
+        "column_login_name": "登录名",
+        "column_status": "状态",
+        "column_last_login": "最后登录",
+        "button_new": "新建账号",
+        "button_delete": "删除选中",
+        "button_refresh": "刷新列表",
+        "button_import": "文本导入",
+        "button_quick_line_import": "快速保存",
+        "batch_status_label": "批量状态",
+        "button_apply_batch_status": "应用到选中",
+        "detail_title": "账号详情",
+        "field_profile_name": "账号名称",
+        "field_login_name": "登录名",
+        "field_email": "绑定邮箱",
+        "field_phone": "手机号",
+        "field_last_login": "最后登录",
+        "field_note": "备注",
+        "field_password": "密码",
+        "field_status": "状态",
+        "show_password": "显示",
+        "button_save": "保存账号",
+        "button_login": "登录Steam",
+        "button_start_auto_login": "开始自动登录",
+        "button_choose_steam": "选择Steam路径",
+        "button_clear": "清空表单",
+        "detail_action_hint": "提示：账号编辑和 Steam 登录已分开；点击“登录Steam”可打开登录与 Steam 设置面板。",
+        "steam_login_dialog_title": "Steam 登录与设置",
+        "steam_login_dialog_heading": "Steam 登录与设置",
+        "auto_login_hint": "提示：当前登录流程会实验性地使用 steam.exe 的 -login 参数启动；若 Steam 已在运行，通常需要先退出客户端。若遇到 Steam Guard 仍需手动完成。",
+        "steam_shutdown_strategy_label": "Steam 退出方式",
+        "steam_shutdown_strategy_graceful_then_force": "温和退出，超时后询问",
+        "steam_shutdown_strategy_force": "直接强制结束",
+        "summary_text": "共 {total} 个账号，当前筛选结果 {filtered} 个",
+        "selection_current": "当前选中：{profile_name} ({login_name})",
+        "prompt_title": "提示",
+        "error_title": "错误",
+        "success_title": "成功",
+        "button_ok": "知道了",
+        "import_dialog_title": "文本批量导入",
+        "import_dialog_heading": "粘贴原始文本后自动识别 Steam / 5E / 邮箱信息",
+        "import_dialog_description": "示例支持：5e账号、密码、昵称、steam账号、邮箱账号（或油箱账号）等提示词，无需固定分隔符。",
+        "import_empty_warning": "请先粘贴要导入的文本。",
+        "import_no_match_warning": "没有识别到可导入的账号信息。",
+        "import_result_title": "导入结果",
+        "import_preview_title": "导入确认",
+        "import_preview_summary": "本次导入将执行以下操作：\n新增 {created} 条\n覆盖已有账号 {updated} 条\n跳过 {skipped} 条",
+        "import_preview_update_hint": "覆盖规则：按登录名匹配已有账号。",
+        "import_preview_duplicate_hint": "本次导入文本内存在重复登录名，重复项将按最后一条生效：{login_names}",
+        "import_confirm_question": "是否继续导入？",
+        "import_result_summary": "导入完成：新增 {created} 条，覆盖已有账号 {updated} 条，跳过 {skipped} 条。",
+        "import_result_partial_hint": "有部分文本未识别到 Steam 账号或密码，可以继续把样例发我，我再帮你补规则。",
+        "button_start_import": "开始导入",
+        "button_quick_line_save": "解析并保存",
+        "button_close": "关闭",
+        "quick_line_dialog_title": "账号快速保存",
+        "quick_line_dialog_heading": "粘贴一行或多行账号文本并保存",
+        "quick_line_dialog_description": "适合 accounts.txt 里一行一个账号的格式。程序会自动识别 Steam / 5E / 邮箱信息；如果登录名已存在，会按导入预览确认后覆盖。",
+        "quick_line_empty_warning": "请先粘贴账号文本。",
+        "quick_line_multiple_warning": "快速保存支持一行或多行账号文本。",
+        "quick_line_overwrite_title": "确认覆盖",
+        "quick_line_overwrite_message": "登录名“{login_name}”已存在，对应账号“{profile_name}”。是否用当前文本覆盖？",
+        "account_name_required": "请先填写账号名称。",
+        "login_name_required": "请先填写登录名。",
+        "login_name_duplicate": "登录名“{login_name}”已经存在，请确认后再保存。",
+        "update_not_found_error": "未找到要更新的账号，请刷新后重试。",
+        "account_updated_success": "账号信息已更新。",
+        "account_created_success": "新账号已创建。",
+        "login_status_prefix": "登录状态：{message}",
+        "choose_steam_exe_title": "选择 steam.exe",
+        "filetype_steam_client": "Steam 客户端",
+        "filetype_executable": "可执行文件",
+        "filetype_all": "所有文件",
+        "steam_path_set_status": "已设置 Steam 路径：{path}",
+        "steam_not_detected_info": "未自动识别到 Steam，请先手动选择一次 steam.exe。",
+        "invalid_steam_path_title": "Steam 路径无效",
+        "invalid_steam_path_warning": "请选择文件名为 steam.exe 的 Steam 客户端。\n当前选择不会被保存或使用：{path}",
+        "invalid_saved_steam_path_warning": "已忽略已保存的 Steam 路径，因为它不是 steam.exe。\n被忽略的路径：{path}",
+        "login_in_progress_warning": "正在执行登录流程，请稍候。",
+        "select_account_warning": "请先从左侧选择一个账号。",
+        "missing_login_warning": "当前账号没有填写登录名。",
+        "missing_password_warning": "当前账号没有填写密码。",
+        "steam_path_missing_status": "未设置 Steam 路径，登录流程已取消。",
+        "launching_login_status": "正在启动 Steam，准备登录 {profile_name} ...",
+        "steam_closing_running_status": "检测到 Steam 已在运行，正在自动退出现有进程...",
+        "steam_graceful_closing_running_status": "检测到 Steam 已在运行，正在请求 Steam 正常退出...",
+        "steam_graceful_close_success_status": "Steam 已正常退出，准备重新启动登录流程...",
+        "steam_graceful_close_timeout_status": "Steam 长时间未退出，等待确认是否强制结束进程...",
+        "steam_force_closing_running_status": "检测到 Steam 已在运行，正在按设置强制结束现有进程...",
+        "steam_force_close_confirm_title": "确认强制结束 Steam",
+        "steam_force_close_confirm_message": "Steam 未能在预期时间内正常退出。\n\n是否强制结束 Steam 进程？这可能中断下载、更新或正在运行的游戏。",
+        "steam_force_close_cancelled_error": "已取消强制结束 Steam，登录流程已停止。请手动处理 Steam 后重试。",
+        "steam_running_close_required_error": "检测到 Steam 已在运行，但自动退出失败。请手动完全退出 Steam 后重试。",
+        "steam_started_status": "Steam 已使用 -login 参数启动，正在等待客户端接管登录...",
+        "login_success_status": "已尝试自动登录，请稍等，Steam 界面正在拉起。若长时间未拉起界面，建议排查任务管理器，检查 Steam 是否打开，再决定是否再次点击自动登录。",
+        "login_attempt_notice_title": "自动登录提示",
+        "login_attempt_notice_heading": "已尝试自动登录",
+        "login_attempt_notice_message": "已尝试自动登录，请稍等，Steam 界面正在拉起。若长时间未拉起界面，建议排查任务管理器，检查 Steam 是否打开，再决定是否再次点击自动登录。",
+        "login_attempt_notice_dont_show_again": "下次不再提示",
+        "steam_login_failed_title": "Steam 登录失败",
+        "new_mode_selection": "新建模式：请填写账号信息",
+        "delete_confirm_title": "确认删除",
+        "delete_confirm_message": "确定要删除账号“{profile_name}”吗？此操作会同步更新本地 JSON 数据。",
+        "batch_delete_confirm_message": "确定要删除选中的 {count} 个账号吗？此操作会同步更新本地 JSON 数据。",
+        "account_not_found_error": "未找到该账号，请刷新列表后重试。",
+        "account_deleted_success": "账号已删除。",
+        "batch_deleted_success": "已删除选中的 {count} 个账号。",
+        "batch_no_selection_warning": "请先在左侧列表选择一个或多个账号。",
+        "batch_status_confirm_title": "确认批量修改状态",
+        "batch_status_confirm_message": "确定要把选中的 {count} 个账号状态改为“{status}”吗？",
+        "batch_status_success": "已将 {count} 个账号状态改为“{status}”。",
+        "save_accounts_failed": "保存账号数据失败：{error}\n文件位置：{path}",
+        "save_settings_failed": "保存设置失败：{error}\n文件位置：{path}",
+        "data_load_issue_title": "数据文件异常",
+        "accounts_load_failed": "账号数据文件读取或结构校验失败，程序已按空账号列表继续启动。\n原文件：{path}\n备份副本：{backup_path}\n错误：{error}",
+        "settings_load_failed": "设置文件读取或结构校验失败，程序已按默认设置继续启动。\n原文件：{path}\n备份副本：{backup_path}\n错误：{error}",
+        "backup_not_created": "未能创建备份",
+        "clipboard_alloc_error": "无法申请系统剪贴板内存。",
+        "clipboard_write_error": "无法写入系统剪贴板。",
+        "clipboard_open_error": "无法打开系统剪贴板。",
+        "clipboard_set_error": "无法将文本写入剪贴板。",
+        "note_5e_account_label": "5E账号",
+        "note_5e_password_label": "5E密码",
+        "note_email_password_label": "邮箱密码",
+    },
+    LANGUAGE_EN: {
+        "app_title": "Steam Account Manager",
+        "app_subtitle": "Manage local Steam accounts with search, filters, editing, and JSON persistence.",
+        "status_all": "All",
+        "default_selection": "No account selected",
+        "login_status_idle": "Login Status: Idle",
+        "list_title": "Accounts",
+        "search_label": "Search",
+        "status_filter_label": "Filter by Status",
+        "column_profile_name": "Profile Name",
+        "column_login_name": "Login Name",
+        "column_status": "Status",
+        "column_last_login": "Last Login",
+        "button_new": "New Account",
+        "button_delete": "Delete Selected",
+        "button_refresh": "Refresh List",
+        "button_import": "Import Text",
+        "button_quick_line_import": "Quick Save",
+        "batch_status_label": "Batch Status",
+        "button_apply_batch_status": "Apply to Selected",
+        "detail_title": "Account Details",
+        "field_profile_name": "Profile Name",
+        "field_login_name": "Login Name",
+        "field_email": "Email",
+        "field_phone": "Phone",
+        "field_last_login": "Last Login",
+        "field_note": "Notes",
+        "field_password": "Password",
+        "field_status": "Status",
+        "show_password": "Show",
+        "button_save": "Save Account",
+        "button_login": "Login to Steam",
+        "button_start_auto_login": "Start Auto Login",
+        "button_choose_steam": "Choose Steam Path",
+        "button_clear": "Clear Form",
+        "detail_action_hint": "Tip: account editing and Steam login are separated. Click Login to Steam to open the login and Steam settings panel.",
+        "steam_login_dialog_title": "Steam Login and Settings",
+        "steam_login_dialog_heading": "Steam Login and Settings",
+        "auto_login_hint": "Tip: The current login flow experimentally launches steam.exe with the -login argument. Steam usually needs to be fully closed first. Steam Guard still needs to be completed manually if prompted.",
+        "steam_shutdown_strategy_label": "Steam shutdown mode",
+        "steam_shutdown_strategy_graceful_then_force": "Graceful first, ask after timeout",
+        "steam_shutdown_strategy_force": "Force shutdown directly",
+        "summary_text": "{total} accounts total, {filtered} currently shown",
+        "selection_current": "Selected: {profile_name} ({login_name})",
+        "prompt_title": "Notice",
+        "error_title": "Error",
+        "success_title": "Success",
+        "button_ok": "OK",
+        "import_dialog_title": "Bulk Text Import",
+        "import_dialog_heading": "Paste raw text to detect Steam / 5E / email account info automatically",
+        "import_dialog_description": "Supported hints include 5E account, password, nickname, Steam account, and email account labels without requiring a strict separator.",
+        "import_empty_warning": "Paste some text to import first.",
+        "import_no_match_warning": "No importable account data was detected.",
+        "import_result_title": "Import Result",
+        "import_preview_title": "Confirm Import",
+        "import_preview_summary": "This import will do the following:\nCreate {created}\nOverwrite existing accounts {updated}\nSkip {skipped}",
+        "import_preview_update_hint": "Overwrite rule: existing accounts are matched by login name.",
+        "import_preview_duplicate_hint": "This pasted text contains duplicate login names. The last occurrence will win: {login_names}",
+        "import_confirm_question": "Continue with the import?",
+        "import_result_summary": "Import finished: {created} created, {updated} overwritten, {skipped} skipped.",
+        "import_result_partial_hint": "Some lines did not include a Steam account or password. Send me a sample later and I can help extend the parser.",
+        "button_start_import": "Start Import",
+        "button_quick_line_save": "Parse and Save",
+        "button_close": "Close",
+        "quick_line_dialog_title": "Quick Save Accounts",
+        "quick_line_dialog_heading": "Paste one or more account lines and save them",
+        "quick_line_dialog_description": "Use this for one-account-per-line records like accounts.txt. The app will detect Steam / 5E / email info automatically. Existing login names will be overwritten after the import preview is confirmed.",
+        "quick_line_empty_warning": "Paste account text first.",
+        "quick_line_multiple_warning": "Quick save supports one or more account lines.",
+        "quick_line_overwrite_title": "Confirm Overwrite",
+        "quick_line_overwrite_message": "Login name \"{login_name}\" already exists for \"{profile_name}\". Overwrite it with this line?",
+        "account_name_required": "Please fill in the profile name first.",
+        "login_name_required": "Please fill in the login name first.",
+        "login_name_duplicate": "The login name \"{login_name}\" already exists. Please confirm it before saving.",
+        "update_not_found_error": "The account to update could not be found. Refresh and try again.",
+        "account_updated_success": "Account details were updated.",
+        "account_created_success": "The new account was created.",
+        "login_status_prefix": "Login Status: {message}",
+        "choose_steam_exe_title": "Choose steam.exe",
+        "filetype_steam_client": "Steam Client",
+        "filetype_executable": "Executable Files",
+        "filetype_all": "All Files",
+        "steam_path_set_status": "Steam path set to: {path}",
+        "steam_not_detected_info": "Steam could not be detected automatically. Please choose steam.exe once.",
+        "invalid_steam_path_title": "Invalid Steam Path",
+        "invalid_steam_path_warning": "Choose the Steam client file named steam.exe.\nThis path will not be saved or used: {path}",
+        "invalid_saved_steam_path_warning": "The saved Steam path was ignored because it is not steam.exe.\nIgnored path: {path}",
+        "login_in_progress_warning": "A login flow is already running. Please wait.",
+        "select_account_warning": "Select an account from the left list first.",
+        "missing_login_warning": "The current account does not have a login name.",
+        "missing_password_warning": "The current account does not have a password.",
+        "steam_path_missing_status": "Steam path is not configured, so the login flow was cancelled.",
+        "launching_login_status": "Launching Steam and preparing to log in as {profile_name} ...",
+        "steam_closing_running_status": "Steam is already running. Closing existing Steam processes first...",
+        "steam_graceful_closing_running_status": "Steam is already running. Asking Steam to exit normally...",
+        "steam_graceful_close_success_status": "Steam exited normally. Preparing to restart the login flow...",
+        "steam_graceful_close_timeout_status": "Steam did not exit after a while. Waiting for confirmation before forcing it to close...",
+        "steam_force_closing_running_status": "Steam is already running. Forcing existing Steam processes to close based on the selected setting...",
+        "steam_force_close_confirm_title": "Confirm Force Closing Steam",
+        "steam_force_close_confirm_message": "Steam did not exit within the expected time.\n\nForce close Steam processes? This may interrupt downloads, updates, or a running game.",
+        "steam_force_close_cancelled_error": "Force closing Steam was cancelled, so the login flow stopped. Handle Steam manually and try again.",
+        "steam_running_close_required_error": "Steam is already running, but automatic shutdown failed. Fully exit Steam and try again.",
+        "steam_started_status": "Steam was launched with the -login argument. Waiting for the client to handle sign-in...",
+        "login_success_status": "Automatic login has been attempted. Please wait while the Steam window starts. If the window does not appear for a long time, check Task Manager to confirm whether Steam is open before clicking automatic login again.",
+        "login_attempt_notice_title": "Automatic Login Notice",
+        "login_attempt_notice_heading": "Automatic login was attempted",
+        "login_attempt_notice_message": "Automatic login has been attempted. Please wait while the Steam window starts. If the window does not appear for a long time, check Task Manager to confirm whether Steam is open before clicking automatic login again.",
+        "login_attempt_notice_dont_show_again": "Do not show this again",
+        "steam_login_failed_title": "Steam Login Failed",
+        "new_mode_selection": "New account mode: fill in the account details",
+        "delete_confirm_title": "Confirm Delete",
+        "delete_confirm_message": "Delete account \"{profile_name}\"? This will also update the local JSON data.",
+        "batch_delete_confirm_message": "Delete the selected {count} accounts? This will also update the local JSON data.",
+        "account_not_found_error": "The selected account could not be found. Refresh the list and try again.",
+        "account_deleted_success": "The account was deleted.",
+        "batch_deleted_success": "Deleted {count} selected accounts.",
+        "batch_no_selection_warning": "Select one or more accounts from the left list first.",
+        "batch_status_confirm_title": "Confirm Batch Status Change",
+        "batch_status_confirm_message": "Change the selected {count} accounts to \"{status}\"?",
+        "batch_status_success": "Changed {count} accounts to \"{status}\".",
+        "save_accounts_failed": "Failed to save account data: {error}\nFile: {path}",
+        "save_settings_failed": "Failed to save settings: {error}\nFile: {path}",
+        "data_load_issue_title": "Data File Problem",
+        "accounts_load_failed": "The account data file could not be read or did not match the expected structure, so the app started with an empty account list.\nOriginal file: {path}\nBackup copy: {backup_path}\nError: {error}",
+        "settings_load_failed": "The settings file could not be read or did not match the expected structure, so the app started with default settings.\nOriginal file: {path}\nBackup copy: {backup_path}\nError: {error}",
+        "backup_not_created": "No backup was created",
+        "clipboard_alloc_error": "Unable to allocate clipboard memory.",
+        "clipboard_write_error": "Unable to write to the clipboard.",
+        "clipboard_open_error": "Unable to open the system clipboard.",
+        "clipboard_set_error": "Unable to place text onto the clipboard.",
+        "note_5e_account_label": "5E Account",
+        "note_5e_password_label": "5E Password",
+        "note_email_password_label": "Email Password",
+    },
+}
+
+_STATUS_LABEL_TO_KEY: dict[str, str] = {}
+for status_key, labels in STATUS_DEFINITIONS:
+    _STATUS_LABEL_TO_KEY[status_key.casefold()] = status_key
+    for label in labels.values():
+        _STATUS_LABEL_TO_KEY[label.casefold()] = status_key
+
+
+def normalize_language(language_code: str | None) -> str:
+    normalized = (language_code or "").strip().replace("-", "_")
+    if normalized.lower().startswith("zh"):
+        return LANGUAGE_ZH
+    return LANGUAGE_EN
+
+
+def get_translations(language_code: str | None) -> dict[str, str]:
+    return TRANSLATIONS[normalize_language(language_code)]
+
+
+def get_status_options(language_code: str | None) -> list[str]:
+    language = normalize_language(language_code)
+    return [labels[language] for _, labels in STATUS_DEFINITIONS]
+
+
+def normalize_status_value(status_value: str | None) -> str:
+    normalized = (status_value or "").strip()
+    if not normalized:
+        return STATUS_OPTIONS[0]
+    return _STATUS_LABEL_TO_KEY.get(normalized.casefold(), STATUS_OPTIONS[0])
+
+
+def get_status_label(status_value: str | None, language_code: str | None) -> str:
+    status_key = normalize_status_value(status_value)
+    language = normalize_language(language_code)
+    for candidate_key, labels in STATUS_DEFINITIONS:
+        if candidate_key == status_key:
+            return labels[language]
+    return STATUS_DEFINITIONS[0][1][language]
+
+
+BASE_WINDOW_WIDTH = 1180
+BASE_WINDOW_HEIGHT = 720
+BASE_MIN_WIDTH = 1080
+BASE_MIN_HEIGHT = 680
+
+CF_UNICODETEXT = 13
+GMEM_MOVEABLE = 0x0002
+KEYEVENTF_KEYUP = 0x0002
+SW_RESTORE = 9
+VK_CONTROL = 0x11
+VK_TAB = 0x09
+VK_RETURN = 0x0D
+VK_V = 0x56
+
+THEME_POLL_INTERVAL_MS = 2000
+THEMES = {
+    "light": {
+        "app_bg": "#eef3f8",
+        "surface_bg": "#ffffff",
+        "header_bg": "#16324f",
+        "header_fg": "#ffffff",
+        "header_sub_fg": "#d8e6f3",
+        "text_primary": "#16324f",
+        "text_secondary": "#688099",
+        "text_muted": "#7b8da1",
+        "border": "#d5deea",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#1f2937",
+        "entry_insert": "#1f2937",
+        "tree_bg": "#ffffff",
+        "tree_fg": "#1f2937",
+        "tree_heading_bg": "#e8eef6",
+        "tree_heading_fg": "#16324f",
+        "tree_selected_bg": "#2c7be5",
+        "tree_selected_fg": "#ffffff",
+        "button": {
+            "primary": ("#2c7be5", "#ffffff", "#1d66c5"),
+            "danger": ("#c0392b", "#ffffff", "#a93226"),
+            "neutral": ("#e7eef5", "#1f3348", "#d7e3ef"),
+            "success": ("#1f9d55", "#ffffff", "#18854a"),
+            "warning": ("#d97706", "#ffffff", "#b45309"),
+            "info": ("#2563eb", "#ffffff", "#1d4ed8"),
+            "accent": ("#7c3aed", "#ffffff", "#6d28d9"),
+        },
+    },
+    "dark": {
+        "app_bg": "#0f172a",
+        "surface_bg": "#111827",
+        "header_bg": "#020617",
+        "header_fg": "#f8fafc",
+        "header_sub_fg": "#94a3b8",
+        "text_primary": "#e5edf7",
+        "text_secondary": "#a5b4c7",
+        "text_muted": "#8a9aae",
+        "border": "#334155",
+        "entry_bg": "#1f2937",
+        "entry_fg": "#f8fafc",
+        "entry_insert": "#f8fafc",
+        "tree_bg": "#111827",
+        "tree_fg": "#e5edf7",
+        "tree_heading_bg": "#1e293b",
+        "tree_heading_fg": "#f8fafc",
+        "tree_selected_bg": "#2563eb",
+        "tree_selected_fg": "#ffffff",
+        "button": {
+            "primary": ("#2563eb", "#ffffff", "#1d4ed8"),
+            "danger": ("#dc2626", "#ffffff", "#b91c1c"),
+            "neutral": ("#334155", "#e5edf7", "#475569"),
+            "success": ("#16a34a", "#ffffff", "#15803d"),
+            "warning": ("#d97706", "#ffffff", "#b45309"),
+            "info": ("#0284c7", "#ffffff", "#0369a1"),
+            "accent": ("#7c3aed", "#ffffff", "#6d28d9"),
+        },
+    },
+}
