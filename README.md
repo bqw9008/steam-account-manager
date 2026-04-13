@@ -4,6 +4,8 @@ Steam Account Manager is a local Windows desktop tool for managing multiple Stea
 
 The current UI is built with PySide6. The older Tkinter implementation is still kept in `app.py` as a fallback/reference, but `main.py` starts the PySide6 UI by default.
 
+![UI](imgs/main_page.png)
+
 ## Features
 
 - Local account management with JSON persistence.
