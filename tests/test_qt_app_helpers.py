@@ -4,12 +4,20 @@ from types import SimpleNamespace
 
 from config import FIVE_E_UNRANKED, normalize_five_e_rank
 from qt_app import (
+    account_five_e_nickname,
+    account_group_name,
     account_last_used_at,
     account_sort_timestamp,
+    extract_five_e_nicknames,
     five_e_rank_sort_value,
     format_five_e_rank,
     is_account_banned_or_frozen,
+    normalize_group_filter_key,
+    normalize_group_name,
+    normalize_sort_key,
+    normalize_status_filter_key,
     reset_account_five_e_rank_to_unranked,
+    saved_steam_path_text,
 )
 
 
@@ -47,6 +55,37 @@ class QtAppHelperTests(unittest.TestCase):
     def test_blank_five_e_rank_normalizes_to_unranked(self):
         self.assertEqual(normalize_five_e_rank(""), FIVE_E_UNRANKED)
         self.assertEqual(format_five_e_rank("", MESSAGES), "未定级")
+
+    def test_filter_setting_keys_normalize_to_safe_defaults(self):
+        self.assertEqual(normalize_status_filter_key("all"), "all")
+        self.assertEqual(normalize_status_filter_key("frozen"), "frozen")
+        self.assertEqual(normalize_status_filter_key("bad"), "all")
+        self.assertEqual(normalize_group_filter_key("team-a"), "team-a")
+        self.assertEqual(normalize_group_filter_key(""), "__all__")
+        self.assertEqual(normalize_sort_key("five_e_rank"), "five_e_rank")
+        self.assertEqual(normalize_sort_key("bad"), "recent_use")
+
+    def test_account_group_name_is_trimmed(self):
+        account = SimpleNamespace(group_name="  team-a  ")
+
+        self.assertEqual(normalize_group_name("  team-a  "), "team-a")
+        self.assertEqual(account_group_name(account), "team-a")
+
+    def test_saved_steam_path_text_is_trimmed(self):
+        self.assertEqual(saved_steam_path_text({"steam_path": "  C:/Steam/steam.exe  "}), "C:/Steam/steam.exe")
+        self.assertEqual(saved_steam_path_text({}), "")
+
+    def test_extract_five_e_nicknames_from_note(self):
+        note = "old note\n5E昵称: nick_cn\n5E Nickname: nick_en\n5E密码: secret"
+
+        self.assertEqual(extract_five_e_nicknames(note), "nick_cn, nick_en")
+
+    def test_account_five_e_nickname_prefers_dedicated_field(self):
+        account = SimpleNamespace(five_e_nickname="dedicated", note="5E昵称: note_value")
+        legacy_account = SimpleNamespace(five_e_nickname="", note="5E昵称: note_value")
+
+        self.assertEqual(account_five_e_nickname(account), "dedicated")
+        self.assertEqual(account_five_e_nickname(legacy_account), "note_value")
 
     def test_reset_rank_archives_ranked_account(self):
         account = SimpleNamespace(five_e_rank="A++", note="old note")

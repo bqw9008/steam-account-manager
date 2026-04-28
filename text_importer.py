@@ -191,6 +191,8 @@ def parse_account_block(block: str, language_code: str = "zh_CN") -> dict:
         "password": fields["steam_password"],
         "email": email_account,
         "phone": fields["phone"],
+        "group_name": "",
+        "five_e_nickname": ", ".join(five_e_nicknames),
         "status": STATUS_OPTIONS[0],
         "last_login": "",
         "note": "\n".join(note_parts),

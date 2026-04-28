@@ -28,11 +28,9 @@ release/
 *.zip
 pip-wheel-metadata/
 
-data/accounts.json
-data/settings.json
-data/*.invalid-*.json
-data/*.tmp
-data/*.bak
-data/*.log
+data/
 
 accounts.txt
+
+IMPROVEMENT_NOTES.md
+PROJECT_CONTEXT.md

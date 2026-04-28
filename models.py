@@ -18,6 +18,8 @@ class SteamAccount:
     password: str
     email: str
     phone: str
+    group_name: str
+    five_e_nickname: str
     five_e_rank: str
     status: str
     last_login: str
@@ -37,6 +39,8 @@ class SteamAccount:
         status: str,
         last_login: str,
         note: str,
+        group_name: str = "",
+        five_e_nickname: str = "",
         frozen_until: str = "",
         five_e_rank: str = "",
     ) -> "SteamAccount":
@@ -48,6 +52,8 @@ class SteamAccount:
             password=password,
             email=email.strip(),
             phone=phone.strip(),
+            group_name=group_name.strip(),
+            five_e_nickname=five_e_nickname.strip(),
             five_e_rank=normalize_five_e_rank(five_e_rank),
             status=normalize_status_value(status),
             last_login=last_login.strip(),
@@ -66,6 +72,8 @@ class SteamAccount:
             password=payload.get("password", ""),
             email=payload.get("email", ""),
             phone=payload.get("phone", ""),
+            group_name=payload.get("group_name", ""),
+            five_e_nickname=payload.get("five_e_nickname", ""),
             five_e_rank=normalize_five_e_rank(payload.get("five_e_rank", "")),
             status=normalize_status_value(payload.get("status", STATUS_OPTIONS[0])),
             last_login=payload.get("last_login", ""),

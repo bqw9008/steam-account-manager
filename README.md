@@ -11,9 +11,10 @@ The current UI is built with PySide6. The older Tkinter implementation is archiv
 ## Features
 
 - Local account management with JSON persistence.
-- Search and status filtering.
-- Account sorting by recent use or banned/frozen state.
-- Per-account 5E rank selection and 5E rank sorting.
+- User-defined account groups, group filtering, and batch group assignment.
+- Search, status/group filtering, and sort selection with persisted list settings.
+- Account sorting by recent use, 5E rank, or banned/frozen state.
+- Required Steam login fields with optional 5E nickname and 5E rank fields shown directly in the account list.
 - 5E season reset button: set every account to unranked and archive previous ranks in notes.
 - Manual frozen-until time with approximate remaining-time display.
 - Create, edit, delete, and batch-delete accounts.
@@ -23,6 +24,7 @@ The current UI is built with PySide6. The older Tkinter implementation is archiv
 - Duplicate import handling by `login_name`.
 - Safer import overwrite behavior: empty imported fields do not wipe existing `last_login` or notes.
 - Steam path auto-detection before manual selection.
+- Login can be started from either the main account list or an existing account detail dialog.
 - Last login time updates after a Steam login attempt starts successfully.
 - Steam login panel with configurable shutdown behavior:
   - graceful shutdown first, ask before force close
@@ -48,6 +50,12 @@ conda activate py
 python -m pip install -r requirements.txt
 ```
 
+All verification commands in this repository are expected to run in the `py` Conda environment, for example:
+
+```powershell
+conda run -n py python -m unittest discover -s tests -v
+```
+
 ## Run
 
 ```powershell
@@ -69,6 +77,8 @@ data/settings.json
 
 These files are intentionally ignored by Git because they may contain account names, passwords, email addresses, phone numbers, Steam paths, and local settings.
 
+`settings.json` also stores local UI preferences such as the account search text, status filter, group filter, sort order, Steam path, and login-notice settings.
+
 ## Import Format
 
 The importer is designed for loosely structured account text containing labels such as:
@@ -83,6 +93,10 @@ The importer is designed for loosely structured account text containing labels s
 - `手机号`
 
 One-account-per-line formats and multi-line account blocks are both supported.
+
+Parsed 5E nicknames are stored in the dedicated `five_e_nickname` account field and shown as a separate column in the account list. Older data that still has a `5E昵称: ...` / `5E Nickname: ...` line in notes is still displayed through a fallback parser.
+
+Steam login name and Steam password are the core required fields for an account. 5E information is optional and can be filled later.
 
 ## Security Notes
 
